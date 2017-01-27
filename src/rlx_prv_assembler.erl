@@ -121,7 +121,9 @@ format_error({start_clean_script_generation_error, Module, Errors}) ->
      rlx_util:indent(2), Module:format_error(Errors)];
 format_error({strip_release, Reason}) ->
     io_lib:format("Stripping debug info from release beam files failed becuase ~s",
-                  [beam_lib:format_error(Reason)]).
+                  [beam_lib:format_error(Reason)]);
+format_error({file_write_error, Reason, Filename}) ->
+    io_lib:format("failed to write(~p): ~s", [Reason, Filename]).
 
 %%%===================================================================
 %%% Internal Functions
@@ -263,10 +265,11 @@ write_file_if_contents_differ(Filename, Bytes) ->
     case file:read_file(Filename) of
         {ok, ToWrite} ->
             ok;
-        {ok,  _} ->
-            file:write_file(Filename, ToWrite);
-        {error,  _} ->
-            file:write_file(Filename, ToWrite)
+        _ ->
+            case file:write_file(Filename, ToWrite) of
+                ok -> ok;
+                {error, R} -> ?RLX_ERROR({file_write_error, R, Filename})
+            end
     end.
 
 remove_symlink_or_directory(TargetDir) ->
