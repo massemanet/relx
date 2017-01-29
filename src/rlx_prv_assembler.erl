@@ -29,6 +29,7 @@
          format_error/1]).
 
 -include("relx.hrl").
+-include_lib("kernel/include/file.hrl").
 
 -define(PROVIDER, release).
 -define(DEPS, [resolve_release]).
@@ -264,9 +265,10 @@ write_file_if_contents_differ(Filename, Bytes) ->
         {ok, ToWrite} ->
             ok;
         {ok,  _} ->
-            file:write_file(Filename, ToWrite);
-        {error,  _} ->
-            file:write_file(Filename, ToWrite)
+            {ok, OldFI} = file:read_file_info(Filename),
+            NewFI = OldFI#file_info{mode = OldFI#file_info.mode bor 8#200},
+            ok = file:write_file_info(Filename, NewFI),
+            ok = file:write_file(Filename, ToWrite)
     end.
 
 remove_symlink_or_directory(TargetDir) ->
